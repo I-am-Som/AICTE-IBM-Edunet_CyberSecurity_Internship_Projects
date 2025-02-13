@@ -1,0 +1,5 @@
+opencv/build/x64/vc16/bin/*.dll filter=lfs diff=lfs merge=lfs -text
+opencv/build/x64/vc16/bin/*.pdb filter=lfs diff=lfs merge=lfs -text
+steganoGrpahy/src/main/resources/libs/ filter=lfs diff=lfs merge=lfs -text
+*.dll filter=lfs diff=lfs merge=lfs -text
+*.jar filter=lfs diff=lfs merge=lfs -text
