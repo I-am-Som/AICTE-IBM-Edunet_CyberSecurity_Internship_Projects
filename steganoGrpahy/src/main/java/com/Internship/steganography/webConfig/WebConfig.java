@@ -13,9 +13,9 @@ public class WebConfig implements WebMvcConfigurer {
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**")
-                .allowedOrigins("http://localhost:5173")  // Change this for security
-                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-                .allowedHeaders("*")
+                .allowedOrigins("http://localhost:5173")  // Change this for production security
+                .allowedMethods("POST", "GET")
+                .allowedHeaders("Content-Type", "Authorization") // Limit headers
                 .allowCredentials(true);
     }
 
@@ -25,4 +25,3 @@ public class WebConfig implements WebMvcConfigurer {
                 .addResourceLocations("classpath:/static/");
     }
 }
-

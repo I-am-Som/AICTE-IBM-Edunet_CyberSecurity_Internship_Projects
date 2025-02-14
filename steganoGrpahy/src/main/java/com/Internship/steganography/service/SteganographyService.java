@@ -1,6 +1,5 @@
 package com.Internship.steganography.service;
 
-import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfByte;
 import org.opencv.imgcodecs.Imgcodecs;
@@ -10,9 +9,12 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.logging.Logger;
 
 @Service
 public class SteganographyService {
+
+    private static final Logger logger = Logger.getLogger(SteganographyService.class.getName());
 
     public File encodeMessage(MultipartFile imageFile, String message, String password) throws IOException {
         // Convert MultipartFile to byte array
@@ -20,25 +22,35 @@ public class SteganographyService {
         MatOfByte matOfByte = new MatOfByte(imageBytes);
         Mat image = Imgcodecs.imdecode(matOfByte, Imgcodecs.IMREAD_UNCHANGED);
 
+        // Check if the image was successfully decoded
         if (image.empty()) {
-            throw new IOException("Could not decode image");
+            throw new IOException("Could not decode image. Ensure the image format is supported and the file is not corrupted.");
         }
 
-        // Encrypt message using password (Simple XOR for now)
+        // Encrypt the message using the password
         String encryptedMessage = encryptMessage(message, password);
 
-        // Ensure message fits within the image
+        // Check if the message can fit in the image
         if (!canEmbedMessage(image, encryptedMessage)) {
-            throw new IOException("Message is too large for this image.");
+            throw new IOException("Message is too large to embed in this image.");
         }
 
-        // Hide the message in the image (LSB technique)
+        // Hide the encrypted message in the image
         hideMessageInImage(image, encryptedMessage);
 
-        // Save the steganographed image
-        File outputFile = File.createTempFile("steganographed", ".png");
-        Imgcodecs.imwrite(outputFile.getAbsolutePath(), image);
+        // Determine the file extension (default to PNG if not specified)
+        String originalFileName = imageFile.getOriginalFilename();
+        String fileExtension = getFileExtension(originalFileName);
 
+        // Save the steganographed image to a temporary file
+        File outputFile = File.createTempFile("steganographed", "." + fileExtension);
+        boolean success = Imgcodecs.imwrite(outputFile.getAbsolutePath(), image);
+
+        if (!success) {
+            throw new IOException("Failed to save the steganographed image to disk.");
+        }
+
+        logger.info("Steganographed image saved to: " + outputFile.getAbsolutePath());
         return outputFile;
     }
 
@@ -48,32 +60,37 @@ public class SteganographyService {
         MatOfByte matOfByte = new MatOfByte(imageBytes);
         Mat image = Imgcodecs.imdecode(matOfByte, Imgcodecs.IMREAD_UNCHANGED);
 
+        // Check if the image was successfully decoded
         if (image.empty()) {
-            throw new IOException("Could not decode image");
+            throw new IOException("Could not decode image. Ensure the image format is supported and the file is not corrupted.");
         }
 
         // Extract the hidden message from the image
         String encryptedMessage = extractMessageFromImage(image);
 
-        // Decrypt the message using password
+        // Decrypt the message using the password
         return decryptMessage(encryptedMessage, password);
     }
 
     private String encryptMessage(String message, String password) {
         if (password.isEmpty()) {
-            throw new IllegalArgumentException("Password cannot be empty");
+            throw new IllegalArgumentException("Password cannot be empty.");
         }
 
         StringBuilder encrypted = new StringBuilder();
         int passLen = password.length();
+
+        // XOR encryption
         for (int i = 0; i < message.length(); i++) {
             encrypted.append((char) (message.charAt(i) ^ password.charAt(i % passLen)));
         }
+
         return encrypted.toString();
     }
 
     private String decryptMessage(String encryptedMessage, String password) {
-        return encryptMessage(encryptedMessage, password); // XOR again to decrypt
+        // XOR decryption (same as encryption)
+        return encryptMessage(encryptedMessage, password);
     }
 
     private void hideMessageInImage(Mat image, String message) {
@@ -90,9 +107,9 @@ public class SteganographyService {
                 int channel = (index % (image.cols() * 3)) % 3;
 
                 double[] pixel = image.get(row, col);
-                int pixelValue = (int) pixel[channel]; // Cast to int for bitwise operations
-                pixelValue = (pixelValue & 0xFE) | ((lengthByte >> j) & 1); // Modify the LSB
-                pixel[channel] = (double) pixelValue; // Convert back to double
+                int pixelValue = (int) pixel[channel];
+                pixelValue = (pixelValue & 0xFE) | ((lengthByte >> j) & 1); // Set LSB
+                pixel[channel] = (double) pixelValue;
                 image.put(row, col, pixel);
                 index++;
             }
@@ -107,12 +124,14 @@ public class SteganographyService {
 
                 double[] pixel = image.get(row, col);
                 int pixelValue = (int) pixel[channel];
-                pixelValue = (pixelValue & 0xFE) | ((b >> j) & 1);
+                pixelValue = (pixelValue & 0xFE) | ((b >> j) & 1); // Set LSB
                 pixel[channel] = (double) pixelValue;
                 image.put(row, col, pixel);
                 index++;
             }
         }
+
+        logger.info("Message successfully embedded in the image.");
     }
 
     private String extractMessageFromImage(Mat image) {
@@ -128,7 +147,7 @@ public class SteganographyService {
                 int channel = (index % (image.cols() * 3)) % 3;
 
                 double[] pixel = image.get(row, col);
-                lengthByte |= (((int) pixel[channel] & 1) << j);
+                lengthByte |= (((int) pixel[channel] & 1) << j); // Get LSB
                 index++;
             }
             messageLength |= (lengthByte & 0xFF) << (8 * i);
@@ -144,18 +163,26 @@ public class SteganographyService {
                 int channel = (index % (image.cols() * 3)) % 3;
 
                 double[] pixel = image.get(row, col);
-                b |= (((int) pixel[channel] & 1) << j);
+                b |= (((int) pixel[channel] & 1) << j); // Get LSB
                 index++;
             }
             messageBytes[i] = b;
         }
 
+        logger.info("Message successfully extracted from the image.");
         return new String(messageBytes, StandardCharsets.UTF_8);
     }
 
     private boolean canEmbedMessage(Mat image, String message) {
-        int availableBits = image.rows() * image.cols() * 3 * 8; // Each pixel has 3 channels
+        int availableBits = image.rows() * image.cols() * 3 * 8; // Total bits in the image
         int requiredBits = (message.length() + 4) * 8; // Message + 4 bytes for length
         return requiredBits <= availableBits;
+    }
+
+    private String getFileExtension(String fileName) {
+        if (fileName == null || !fileName.contains(".")) {
+            return "png"; // Default to PNG if no extension is found
+        }
+        return fileName.substring(fileName.lastIndexOf(".") + 1);
     }
 }

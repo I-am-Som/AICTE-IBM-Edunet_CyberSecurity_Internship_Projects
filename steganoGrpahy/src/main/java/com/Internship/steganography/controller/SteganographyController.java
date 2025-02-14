@@ -4,6 +4,7 @@ import com.Internship.steganography.service.SteganographyService;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -41,13 +42,17 @@ public class SteganographyController {
 
         // Encode the message into the image
         File encodedImage = steganographyService.encodeMessage(imageFile, message, password);
-
-        // Prepare the response
         Resource resource = new FileSystemResource(encodedImage);
-        return ResponseEntity.ok()
+
+        ResponseEntity<Resource> response = ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + encodedImage.getName())
                 .contentType(MediaType.IMAGE_PNG)
                 .body(resource);
+
+        // Schedule file deletion after response
+        encodedImage.deleteOnExit();
+
+        return response;
     }
 
     @PostMapping("/decode")
@@ -80,5 +85,11 @@ public class SteganographyController {
     @ExceptionHandler(IOException.class)
     public ResponseEntity<String> handleIOException(IOException ex) {
         return ResponseEntity.internalServerError().body("An error occurred while processing the image: " + ex.getMessage());
+    }
+
+    // General exception handler
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<String> handleGeneralException(Exception ex) {
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Unexpected error: " + ex.getMessage());
     }
 }
