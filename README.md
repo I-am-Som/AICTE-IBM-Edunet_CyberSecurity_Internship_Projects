@@ -18,12 +18,5 @@ With increasing cybersecurity concerns, traditional encryption methods often dra
 
 ## 📌 How It Works  
 1. **Encode:** Upload an image, enter a message, set a password, and generate a steganographed image.  
-2. **Decode:** Upload the steganographed image, enter the password, and retrieve the hidden message.  
-
-## 🚀 Installation & Setup  
-### **Backend (Spring Boot API)**
-```sh
-git clone <repo-link>
-cd backend
-mvn spring-boot:run
+2. **Decode:** Upload the steganographed image, enter the password, and retrieve the hidden message. 
 
