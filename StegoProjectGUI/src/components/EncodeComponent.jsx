@@ -26,7 +26,7 @@ const EncodeComponent = () => {
     formData.append("message", message);
 
     try {
-      const response = await fetch("http://localhost:8080/steganography/encode", {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/steganography/encode`, {
         method: "POST",
         body: formData,
       });

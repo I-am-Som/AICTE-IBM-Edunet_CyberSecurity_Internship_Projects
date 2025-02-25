@@ -17,7 +17,6 @@ const SteganographyTool = () => {
 
   return (
     <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center p-5">
-      {/* Navigation Tabs */}
       <nav className="flex space-x-4 bg-gray-800 p-3 rounded-lg shadow-md w-full max-w-md mb-5">
         {["encode", "decode"].map((tab) => (
           <button
@@ -31,8 +30,6 @@ const SteganographyTool = () => {
           </button>
         ))}
       </nav>
-
-      {/* Content Section */}
       <div className="bg-gray-800 p-6 rounded-lg shadow-lg w-full max-w-md">
         {renderActiveComponent()}
       </div>
