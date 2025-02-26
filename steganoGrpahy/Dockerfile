@@ -1,13 +1,24 @@
 # Use an official Java runtime as a parent image
 FROM eclipse-temurin:21-jdk
 
-# Set the working directory inside the container
+# Set the working directory
 WORKDIR /app
 
-# Copy the project files to the container
-COPY . .
+# Install OpenCV system libraries
+RUN apt-get update && apt-get install -y libopencv-dev
 
-# Build the project inside the container
+# Copy Maven wrapper files
+COPY mvnw .
+COPY .mvn .mvn
+COPY pom.xml .
+
+# Download dependencies before copying the entire project
+RUN ./mvnw dependency:go-offline
+
+# Copy the entire project
+COPY src src
+
+# Build the project
 RUN ./mvnw clean package -DskipTests
 
 # Copy the built JAR to the container
