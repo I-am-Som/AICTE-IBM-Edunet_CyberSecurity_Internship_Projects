@@ -4,8 +4,10 @@ FROM eclipse-temurin:21-jdk
 # Set the working directory
 WORKDIR /app
 
-# Install OpenCV system libraries
-RUN apt-get update && apt-get install -y libopencv-dev
+# Install OpenCV system libraries and Java bindings
+RUN apt-get update && \
+    apt-get install -y libopencv-dev openjdk-21-jdk && \
+    apt-get install -y libopencv-java
 
 # Copy Maven wrapper files
 COPY mvnw .
@@ -27,5 +29,5 @@ RUN cp target/*.jar app.jar
 # Expose the application port
 EXPOSE 8080
 
-# Run the application
-CMD ["java", "-jar", "app.jar"]
+# Run the application with correct OpenCV path
+CMD ["java", "-Djava.library.path=/usr/lib/x86_64-linux-gnu/", "-jar", "app.jar"]
